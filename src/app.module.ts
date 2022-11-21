@@ -1,10 +1,9 @@
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
-import { AuthModule } from './auth/auth.module';
-import { AuthMiddleware } from './middlewares/auth.middleware';
+import { UserModule } from './user/user.module';
 
 @Module({
     imports: [
@@ -12,9 +11,9 @@ import { AuthMiddleware } from './middlewares/auth.middleware';
             isGlobal: true,
         }),
         MongooseModule.forRoot(process.env.DB_URL),
-        AuthModule,
+        UserModule,
     ],
     controllers: [AppController],
     providers: [AppService],
 })
-export class AppModule{}
+export class AppModule {}
