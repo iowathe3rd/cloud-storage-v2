@@ -1,6 +1,4 @@
-
-
-export class ApiError extends Error{
+export class ApiError extends Error {
     status;
     error;
 
@@ -10,12 +8,11 @@ export class ApiError extends Error{
         this.error = error;
     }
 
-    static UnauthorizedError(){
-        return new ApiError(401, 'Пользователь не авторизован')
+    static UnauthorizedError() {
+        return new ApiError(401, 'Пользователь не авторизован');
     }
 
-    static BadRequest(message, errors=[]){
-        return new ApiError(400, message, errors)
+    static BadRequest(message, errors = []) {
+        return new ApiError(400, message, errors);
     }
 }
-

@@ -1,26 +1,20 @@
-import {MiddlewareConsumer, Module, NestModule} from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import {ConfigModule} from "@nestjs/config";
-import {MongooseModule} from "@nestjs/mongoose";
+import { ConfigModule } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from './auth/auth.module';
-import {ErrorMiddleware} from "./middlewares/error.middleware";
-import {AuthController} from "./auth/auth.controller";
+import { AuthMiddleware } from './middlewares/auth.middleware';
 
 @Module({
-  imports: [ConfigModule.forRoot({
-    isGlobal: true
-  }),
-      MongooseModule.forRoot(process.env.DB_URl),
-      AuthModule
-  ],
-  controllers: [AppController],
-  providers: [AppService],
+    imports: [
+        ConfigModule.forRoot({
+            isGlobal: true,
+        }),
+        MongooseModule.forRoot(process.env.DB_URL),
+        AuthModule,
+    ],
+    controllers: [AppController],
+    providers: [AppService],
 })
-export class AppModule implements NestModule{
-    configure(consumer: MiddlewareConsumer): any {
-        consumer
-            .apply(ErrorMiddleware)
-            .forRoutes(AuthController)
-    }
-}
+export class AppModule{}
