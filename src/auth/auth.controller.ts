@@ -1,58 +1,96 @@
-import {Controller, Get, Post, Body, Patch, Param, Delete, Res} from '@nestjs/common';
+import {
+    Controller,
+    Get,
+    Post,
+    Body,
+    Param,
+    Res,
+    Next,
+    HttpStatus,
+    Req, HttpException,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
-import {Response} from "express";
-import {UserService} from "./services/user/user.service";
+import { NextFunction, Request, Response } from 'express';
+import { LoginDto } from './dto/login.dto';
+import {IUser} from "../models/IUser";
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService, private readonly userService: UserService) {}
+    constructor(private readonly authService: AuthService) {}
 
-  @Post('registration')
-  create(@Body() createAuthDto: CreateAuthDto, @Res() res: Response) {
-    // return this.mailService.sendActivationMail('beglerov04@mail.ru', "google.com")
-    return this.authService.registration(createAuthDto, res);
-  }
+    //registration route
+    @Post('registration')
+    create(
+        @Body() createAuthDto: CreateAuthDto,
+        @Res() res: Response,
+    ){
+        try {
+            const userData = this.authService.registration(createAuthDto, res);
 
-  @Post('login')
-  login(): string{
-    return 'login end-point'
-  }
+            res.cookie('refreshToken', userData.refreshToken, {
+                maxAge: 30 * 24 * 60 * 60 * 1000,
+                httpOnly: true,
+            });
 
-  @Post('logout')
-  logout(): string{
-    return 'logout end-point'
-  }
-
-  @Get('activate/:link')
-  activate(@Param() params, @Res() res: Response): void {
-    try {
-      const activationLink = params.link;
-      this.userService.activate(activationLink);
-      return res.redirect(process.env.CLIENT_API);
-    }catch (e) {
-      console.log(e);
+            return res.json(userData);
+        } catch (e) {
+            console.log(e);
+            throw new HttpException("При регистрации что то пошло не так", HttpStatus.BAD_REQUEST);
+        }
     }
-  }
 
-  @Get('refresh')
-  refresh(): string {
-    return 'refresh token route';
-  }
+    //login route
+    @Post('login')
+    login(
+        @Body() loginDto: LoginDto,
+        @Res() res: Response,
+    ): Promise<Response> | Response {
+        try {
+            const userData = this.authService.login(loginDto, res);
+            return res.status(HttpStatus.OK).json(userData);
+        } catch (e) {
+            throw new HttpException("Логин или пароль неправильные", HttpStatus.BAD_REQUEST);
+        }
+    }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return 'get user by id route';
-  }
+    //logout route
+    @Post('logout')
+    logout(
+        @Req() req: Request,
+        @Res() res: Response,
+    ): Promise<Response> | Response {
+        try {
+            return this.authService.logout(req, res);
+        } catch (e) {
+            console.log(e);
+            throw new HttpException("Что то пошло не так", HttpStatus.BAD_REQUEST);
+        }
+    }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAuthDto: UpdateAuthDto) {
-    return 'patch route';
-  }
+    //activate account route
+    @Get('activate/:link')
+    activate(
+        @Param('link') activationLink,
+        @Res() res: Response,
+        @Next() next: NextFunction,
+    ): Promise<void | Response> {
+        try {
+            return this.authService.activate(activationLink, res);
+        } catch (e) {
+            console.log(e);
+            throw new HttpException("Не удалось подтвердить почту", HttpStatus.BAD_REQUEST);
+        }
+    }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return 'delete route';
-  }
+    //refresh access token route
+    @Get('refresh')
+    refresh(@Req() req: Request, @Res() res: Response) {
+        try {
+            return this.authService.refresh(req, res);
+        } catch (e) {
+            console.log(e);
+            throw new HttpException("Не удалось обновить токен", HttpStatus.UNAUTHORIZED);
+        }
+    }
 }
