@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import {MiddlewareConsumer, Module, NestModule, RequestMethod} from '@nestjs/common';
 import { UserService } from './services/user/user.service';
 import { UserController } from './user.controller';
 import {MailService} from "./services/mail/mail.service";
@@ -7,6 +7,7 @@ import {MongooseModule} from "@nestjs/mongoose";
 import {User, UserSchema} from "../../schemas/User";
 import {Token, TokenSchema} from "../../schemas/Token";
 import {JwtModule} from "@nestjs/jwt";
+import {AuthMiddleware} from "../middlewares/auth.middleware";
 
 @Module({
     imports: [
@@ -19,4 +20,11 @@ import {JwtModule} from "@nestjs/jwt";
     controllers: [UserController],
     providers: [UserService, MailService, TokenService],
 })
-export class UserModule {}
+export class UserModule implements NestModule{
+    configure(consumer: MiddlewareConsumer) {
+        consumer
+            .apply(AuthMiddleware)
+            .forRoutes({ path: 'user/users', method: RequestMethod.GET });
+    }
+}
+

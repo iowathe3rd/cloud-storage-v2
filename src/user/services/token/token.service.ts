@@ -14,7 +14,7 @@ export class TokenService {
     generateTokens(payload) {
         const accessToken = this.jwtService.sign(payload, {
             secret: process.env.JWT_ACCESS_KEY,
-            expiresIn: '20m',
+            expiresIn: '20s',
         });
         const refreshToken = this.jwtService.sign(payload, {
             secret: process.env.JWT_REFRESH_KEY,
@@ -26,13 +26,40 @@ export class TokenService {
         };
     }
 
+    validateAccessToken(token: string){
+        try {
+            const userData = this.jwtService.verify(token, {secret: process.env.JWT_ACCESS_KEY});
+            return userData;
+        }catch (e) {
+            return null;
+        }
+    }
+
+    validateRefreshToken(token: string){
+        try {
+            const userData = this.jwtService.verify(token, {secret: process.env.JWT_REFRESH_KEY});
+            return userData;
+        }catch (e) {
+            return null;
+        }
+    }
+
     async saveToken(userId, refreshToken) {
         const tokenData = await this.TokenModel.findOne({ user: userId });
         if (tokenData) {
             tokenData.refreshToken = refreshToken;
             return tokenData.save();
         }
-        const token = this.TokenModel.create({ user: userId, refreshToken });
+        const token = await this.TokenModel.create({ user: userId, refreshToken });
         return token;
+    }
+
+    async removeToken(refreshToken: string): Promise<void>{
+        const tokenData = this.TokenModel.deleteOne({refreshToken});
+    }
+
+    async findToken(refreshToken: string): Promise<any>{
+        const tokenData = this.TokenModel.findOne({refreshToken});
+        return tokenData;
     }
 }

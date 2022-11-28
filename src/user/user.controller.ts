@@ -5,11 +5,12 @@ import {
     Body,
     HttpStatus,
     Res,
-    HttpException, Param,
+    HttpException, Param, Req,
 } from '@nestjs/common';
 import { UserService } from './services/user/user.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { Response } from 'express';
+import {Request, Response} from 'express';
+import {LoginUserDto} from "./dto/login-user.dto";
 
 @Controller('user')
 export class UserController {
@@ -26,6 +27,10 @@ export class UserController {
                 maxAge: 30 * 24 * 60 * 60 * 1000,
                 httpOnly: true,
             });
+            res.cookie('accessToken', userData.accessToken, {
+                maxAge: 30 * 60 * 1000,
+                httpOnly: true,
+            });
             return res
                 .status(HttpStatus.CREATED)
                 .json(userData);
@@ -39,14 +44,32 @@ export class UserController {
     }
 
     @Post('login')
-    login() {
+    async login(@Body() loginDto: LoginUserDto, @Res() res: Response) {
         try {
-        } catch (e) {}
+            const userData = await this.userService.login(loginDto);
+            res.cookie('refreshToken', userData.refreshToken, {
+                maxAge: 30 * 24 * 60 * 60 * 1000,
+                httpOnly: true,
+            });
+            res.cookie('accessToken', userData.accessToken, {
+                maxAge: 30 * 60 * 1000,
+                httpOnly: true,
+            });
+            return res.json(userData);
+        } catch (e) {
+            throw new HttpException("Данные были введены некорректно", HttpStatus.BAD_REQUEST);
+        }
     }
     @Post('logout')
-    logout() {
+    async logout(@Req() req: Request, @Res() res: Response) {
         try {
-        } catch (e) {}
+            const {refreshToken} = req.cookies;
+            await this.userService.logout(refreshToken);
+            res.clearCookie("refreshToken");
+            return res.status(HttpStatus.OK).json({message: "logout"});
+        } catch (e) {
+            throw new HttpException("Возникла непридвиденная ошибка", HttpStatus.BAD_REQUEST);
+        }
     }
     @Get('/activate/:link')
     activate(@Param() params, @Res() res: Response) {
@@ -59,8 +82,27 @@ export class UserController {
         }
     }
     @Get('refresh')
-    refresh() {
+    async refresh(@Req() req: Request, @Res() res: Response) {
         try {
-        } catch (e) {}
+            const {refreshToken} = req.cookies;
+            const userData = await this.userService.refresh(refreshToken);
+            res.cookie('refreshToken', userData.refreshToken, {
+                maxAge: 30 * 24 * 60 * 60 * 1000,
+                httpOnly: true,
+            });
+            return res.status(HttpStatus.CREATED).json(userData);
+        } catch (e) {
+            throw new HttpException("Вы не авторизованы", HttpStatus.UNAUTHORIZED);
+        }
+    }
+    //mock route,  for auth testing
+    @Get('users')
+    async getUsers(@Res() res: Response){
+        try {
+            const users = await this.userService.getAllUsers();
+            return res.status(HttpStatus.OK).json(users)
+        }catch (e) {
+            throw new HttpException("bad request", HttpStatus.BAD_REQUEST);
+        }
     }
 }
